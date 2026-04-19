@@ -1,39 +1,79 @@
-# Crescendum
+<h5 align="center">
+  Luya 2D Gaming Engine 🎮
+</h5>
+
+<table align="center">
+<tr>
+<td>
+
+```text
+         _   _   _ __   __ _
+        | | | | | |\ \ / // \
+        | | | | | | \ V // _ \
+        | |_| |_| |  | |/ ___ \
+        |___|\___/   |_/_/   \_\
+
+              2D Gaming Engine
+                on Teensy 4.1
+```
+</td>
+</tr>
+</table>
 
 ## Overview
 
-Crescendum is an opinionated boilerplate for modern C++ projects. It provides what I believe is essential tooling for code quality, testing, and structure for projects of any size. The build system integrates sanitizers, static analyzers, and automated formatting to catch errors, undefined behavior, and segmentation faults during all stages of development.
+The Teensy 4.1 is a microcontroller development board based on the NXP i.MX RT1062, an ARM Cortex-M7 running at up to 600 MHz. With hardware floating-point, a dedicated SPI bus, and a built-in SDIO SD card slot, it provides a capable foundation for a 2D gaming engine driving an Adafruit ILI9341 TFT display.
 
-The boilerplate uses C++20 and includes a test suite built with `doctest`, along with pre-commit hooks for code quality enforcement via `clang-format`, `clang-tidy`, and `cppcheck`.
+<table border="0">
+  <tr>
+    <td width="220">
+      <img src="/docs/teensy-front.jpg" width="200">
+    </td>
+    <td>
+      Luya targets the i.MX RT1062 at 600 MHz with FPv5-D16 hard-float ABI. The display component wraps <code>ILI9341_t3</code> (or the DMA-capable <code>ILI9341_t3n</code>), audio is routed through the Teensy Audio Library via I2S to the SGTL5000 codec, and asset storage is served from the built-in SDIO SD card slot via <code>SdFat</code>.
+    </td>
+  </tr>
+</table>
+
+## Architecture
+
+The engine is structured around three components:
+
+| Component | Class | Library |
+|-----------|-------|---------|
+| Display | `luya::display::Display` |
+| Audio | `luya::Audio` | Teensy Audio Library |
+| Storage | `luya::Storage` | SdFat |
+
+`Engine::init()` is called from Teensy `setup()` and `Engine::tick()` from `loop()`.
+
+### Display drivers
+
+The display component is polymorphic and defaults to `SDL2`, the drivers live in `luya/display/`:
+
+| Driver | Class | Target |
+|--------|-------|--------|
+| Adafruit 2.8" TFT | `Adafruit_Display` | Teensy 4.1 hardware  |
+| SDL2 | `SDL_Display` | Local development |
+
+The SDL2 driver opens a desktop window at the ILI9341 native resolution (320×240) scaled up by `config::scale` (3×, 960×720). `SDL_RenderSetLogicalSize` ensures all draw calls use the same coordinate space as the Adafruit.
 
 ## Build
 
-The recommended build command enables all available tooling:
+### macOS — SDL2
+
+SDL2 is required for all host builds:
 
 ```bash
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DIWYU=ON
-cmake --build build
+brew install sdl2
 ```
 
-For release builds, omit sanitizers and debug symbols:
+Then build:
 
 ```bash
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build
-```
-
-#### Windows
-
-```bash
-cmake -Bbuild -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build
-```
-
-Or with `ninja`:
-
-```bash
-cmake -Bbuild -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build
+./build/luya
 ```
 
 ---
@@ -44,168 +84,88 @@ Run the test suite:
 ./build/test_suite
 ```
 
-## Installation
+### Debian Based — SDL2
 
-### macOS
-
-Install dependencies with Homebrew:
+Install dependencies:
 
 ```bash
-brew install cmake llvm cppcheck
-brew install --HEAD include-what-you-use
+sudo apt update
+sudo apt install cmake ninja-build libsdl2-dev
 ```
 
-Valgrind is not officially supported on modern macOS. Use sanitizers instead.
-
-### Linux
-
-For Debian/Ubuntu:
+Then build:
 
 ```bash
-sudo apt-get install cmake clang-tidy clang-format cppcheck valgrind iwyu
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build
+./build/luya
 ```
 
-For Fedora/RHEL:
+Run the test suite:
 
 ```bash
-sudo dnf install cmake clang-tools-extra cppcheck valgrind iwyu
+./build/test_suite
 ```
 
-### Windows
+### Windows — MinGW + SDL2
+
+Install [MSYS2](https://www.msys2.org/), then from an **MSYS2 MinGW64** shell install dependencies:
 
 ```bash
-# Install MSYS2 from https://www.msys2.org/
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
-pacman -S mingw-w64-x86_64-cppcheck mingw-w64-x86_64-clang-tools-extra
+pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-SDL2
 ```
-
-**Note**: Sanitizers, Valgrind, and IWYU have limited or no support on Windows.
-
-#### MSVC
-
-The CMakeLists.txt includes MSVC-specific flags (`/W4 /WX`).
-
-## Tooling
-
-### Sanitizers
-
-The build system supports multiple sanitizers via `-DUSE_SANITIZER`. These are runtime instrumentation tools that detect bugs during program execution.
-
-- **AddressSanitizer**: Detects memory errors like use-after-free, buffer overflows, and stack corruption
-- **UndefinedBehaviorSanitizer**: Catches undefined behavior such as integer overflow, null pointer dereferences, and misaligned memory access
-- **MemorySanitizer**: Detects uninitialized memory reads (requires special libc build)
-- **ThreadSanitizer**: Detects data races in multithreaded code
-- **LeakSanitizer**: Detects memory leaks
-
-Sanitizers impose runtime overhead but catch bugs that static analysis tools miss. I personally **do not** recommend developing in C++ without at least `Address;Undefined`.
-
-### Pre-commit Hooks
-
-The `.pre-commit-config.yaml` defines git hooks that run automatically before commits:
-
-- **conventional-pre-commit**: Enforces conventional commit message format
-- **clang-format**: Formats code automatically
-- **clang-tidy**: Runs static analysis
-- **cppcheck**: Performs additional static checks
-
-Install pre-commit hooks:
 
 ```bash
-pip install pre-commit
-pre-commit install
-pre-commit install --hook-type commit-msg
+cmake -Bbuild -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build
+./build/luya.exe
 ```
 
-### Valgrind
-
-Valgrind is a dynamic analysis tool that detects memory management issues and profiling. The `memcheck` tool finds memory leaks, invalid memory access, and use of uninitialized memory. Unlike sanitizers, Valgrind requires no recompilation but runs significantly slower.
-
-Run valgrind on the test suite:
+Run the test suite:
 
 ```bash
-valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build/test_suite
+./build/test_suite.exe
 ```
 
-Valgrind is particularly useful on Linux platforms where it has mature support. The CI pipeline runs valgrind automatically on x86_64 Linux builds.
+> **Note:** The MSVC toolchain is not supported. Use the MinGW64 shell from MSYS2, not a Visual Studio developer prompt.
 
-### clang-tidy
+### Teensy 4.1 — cross-compile
 
-A static analysis tool that performs linting and suggests modernization improvements. It checks for common programming errors, style violations, and provides automated fixes. The tool runs via pre-commit hooks and uses the compile commands database generated by CMake.
-
-Configuration is in `.clang-tidy` (create as needed). The pre-commit hook runs with:
+Install [Teensyduino](https://www.pjrc.com/teensy/teensyduino.html) to get `arm-none-eabi-gcc` and the Teensy libraries, then:
 
 ```bash
-clang-tidy -p=./build --header-filter=.*
+cmake -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-teensy41.cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-### clang-format
+To use the DMA-capable `ILI9341_t3n` display driver instead of `ILI9341_t3`, add `-DUSE_ILI9341_T3N=ON`.
 
-An automated code formatter that enforces consistent style. Configuration is in `.clang-format` (create as needed). The pre-commit hook applies formatting automatically before commits.
-
-Run manually:
+If Teensyduino is not installed at the default Arduino.app path, override with:
 
 ```bash
-clang-format -i crescendum/**/*.{cc,h}
+-DTEENSYDUINO_PATH=/path/to/your/teensyduino/hardware/teensy
 ```
-
-### cppcheck
-
-A static analysis tool for C++ that detects bugs, undefined behavior, and dangerous coding constructs. It complements compiler warnings and clang-tidy by checking for issues both tools might miss.
-
-Configuration is in `cppcheck.suppress` which excludes false positives and third-party dependencies. The tool runs via pre-commit hooks with:
-
-```bash
-cppcheck --enable=all --inline-suppr --error-exitcode=1 --language=c++ -I. --suppressions-list=./cppcheck.suppress
-```
-
-### Include What You Use (IWYU)
-
-A tool that analyzes `#include` directives and suggests correct headers. Enable with `-DIWYU=ON` to run during compilation. It helps minimize header dependencies and reduce compilation time.
-
-IWYU integrates directly into the build process and reports warnings during compilation. The tool is strict and may require manual tuning via pragmas.
-
-### CMake Tools
-
-The project uses `cmake-scripts` from StableCoder which provides additional CMake functionality:
-
-- **Sanitizer support**: Easy sanitizer integration via `sanitizers.cmake`
-- **Code coverage**: Generate coverage reports with LLVM or GCC
-- **Compiler options**: Consolidated compiler warning flags
-
-These are automatically fetched via CPM (CMake Package Manager) during configuration.
 
 ## Dependencies
 
-Dependencies are managed via CPM and fetched automatically:
+Teensy libraries (provided by Teensyduino, resolved via `cmake/teensy.cmake`):
 
-- `doctest` - Fast, header-only testing framework
-- `fmt` - Fast, type-safe formatting library
-- `matchit` - Pattern matching for C++
-- `cmake-scripts` - Additional CMake utilities
+- `teensy4_core` — Teensy 4.1 hardware abstraction and startup
+- `ILI9341_t3` / `ILI9341_t3n` — ILI9341 TFT display drivers
+- `SdFat` — SD card filesystem via built-in SDIO
+- `Teensy Audio Library` — I2S audio pipeline and SGTL5000 codec
 
-To add dependencies, edit `CMakeLists.txt` and use `cpmaddpackage`.
+Host-only dependencies
 
-## Project Structure
+- `doctest` — Fast, header-only testing framework
+- `fmt` — Fast, type-safe formatting library
+- `matchit` — Pattern matching for C++
+- `cmake-scripts` — Additional CMake utilities
+- `SDL2` — Default display driver for local development
 
-```
-crescendum/
-├── crescendum/          Source files
-│   ├── hello.cc
-│   ├── hello.h
-│   └── main.cc
-├── test/               Test files
-│   ├── hello.cc
-│   └── main.cc
-├── cmake/              CMake modules
-│   ├── CPM.cmake
-│   └── doctest.cmake
-├── CMakeLists.txt      Build configuration
-├── .pre-commit-config.yaml
-└── cppcheck.suppress   Cppcheck suppressions
-```
+## Licensing
 
-## Extras
+This project is dual-licensed under the **Apache License, Version 2.0** or the **GNU General Public License, Version 3.0 (or later)**.
 
-Notes, books on C++: https://soliloq.uy/my-cpp-notes-documents-books/
+You are free to choose the license that best fits your specific use case. For the full text of each license, please see [LICENSE.Apache-v2](LICENSE.Apache-v2) and [LICENSE-GPL-v3](LICENSE.GPL-v3).
 
-The license is CC0 1.0 Universal, i.e. "public domain." Replace with your own license.

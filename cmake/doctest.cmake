@@ -9,9 +9,16 @@ add_executable(Test_Suite ${sources} ${test_sources})
 
 target_include_directories(Test_Suite PUBLIC fmt::fmt matchit)
 
-target_link_libraries(Test_Suite doctest::doctest fmt::fmt matchit)
+target_link_libraries(Test_Suite PUBLIC doctest::doctest fmt::fmt matchit)
 
-set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 20 OUTPUT_NAME
+# Propagate SDL2 into the test suite when the SDL2 display backend is active
+if(LUYA_USE_SDL2)
+  target_compile_definitions(Test_Suite PUBLIC LUYA_USE_SDL2)
+  target_include_directories(Test_Suite PUBLIC ${SDL2_INCLUDE_DIRS})
+  target_link_libraries(Test_Suite PUBLIC ${SDL2_LIBRARIES})
+endif()
+
+set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 23 OUTPUT_NAME
                                                             "test_suite")
 
 target_include_directories(
