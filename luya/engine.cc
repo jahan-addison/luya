@@ -16,7 +16,7 @@
 namespace luya {
 
 /**
- * @brief One-time hardware and component initialisation
+ * @brief One-time hardware and component initialization
  */
 void Engine::init()
 {
@@ -26,7 +26,7 @@ void Engine::init()
 }
 
 /**
- * @brief Per-frame update; drive rendering and logic each loop() tick
+ * @brief Per-frame update, drive rendering and logic each loop() tick
  */
 void Engine::tick()
 {

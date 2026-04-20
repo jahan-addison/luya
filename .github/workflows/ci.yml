@@ -46,17 +46,23 @@ jobs:
         with:
           cmake-version: '4.x.x'
 
-      - name: setup python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-
       - name: install extras linux
+        if: matrix.platform.name == 'x86_64 Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libsdl2-dev
+
+      - name: install extras linux (g++)
         if: matrix.platform.name == 'x86_64 Linux' && matrix.compiler == 'g++'
         run: |
           sudo apt-get install -y valgrind
 
       - name: install extras macos
+        if: runner.os == 'macOS'
+        run: |
+          brew install sdl2
+
+      - name: install extras macos (coverage)
         if: |
           matrix.platform.name == 'x86_64 macOS' &&
           matrix.compiler == 'clang++'
@@ -71,6 +77,7 @@ jobs:
         run: |
           SANDFLAGS=""
           COVERAGE=""
+          SDL2FLAGS=""
           if [[ "${{ matrix.compiler }}" == "clang++" ]]; then
             SANDFLAGS="-DUSE_SANITIZER=Address;Undefined"
             if [[ "${{ matrix.platform.name }}" == "x86_64 macOS" ]]; then
@@ -78,7 +85,12 @@ jobs:
               export CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm@20"
             fi
           fi
-          cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DIWYU=OFF -DCMAKE_BUILD_TYPE=Debug $SANDFLAGS $COVERAGE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          if [[ "${{ matrix.platform.name }}" == "x86_64 Linux" ]]; then
+            SDL2FLAGS="-DLUYA_USE_SDL2=ON"
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            SDL2FLAGS="-DLUYA_USE_SDL2=ON -DSDL2_DIR=$(brew --prefix sdl2)/lib/cmake/SDL2"
+          fi
+          cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DIWYU=OFF -DCMAKE_BUILD_TYPE=Debug $SANDFLAGS $COVERAGE $SDL2FLAGS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: build
         run: cmake --build build

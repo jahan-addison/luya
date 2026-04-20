@@ -25,7 +25,7 @@ namespace luya {
  * @brief
  *   Teensy Audio Library component
  *
- *   Manages audio memory and the I2S output path through the SGTL5000 codec
+ *   Audio memory and the I2S output path through the SGTL5000 codec
  *   on the Teensy audio shield.  Extend by adding AudioStream nodes and
  *   AudioConnection patches in init().
  *

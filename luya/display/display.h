@@ -49,9 +49,9 @@ class Display
     virtual void init() = 0;
 
     /**
-     * @brief Fill the entire screen with a 16-bit RGB565 colour
+     * @brief Fill the entire screen with a 16-bit RGB565 color
      */
-    virtual void clear(uint16_t colour = 0x0000) = 0;
+    virtual void clear(uint16_t color = 0x0000) = 0;
 };
 
 [[nodiscard]] std::unique_ptr<Display> make();

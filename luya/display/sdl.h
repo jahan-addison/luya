@@ -37,7 +37,7 @@ class SDL_Display : public Display
 
   public:
     void init() override;
-    void clear(uint16_t colour = 0x0000) override;
+    void clear(uint16_t color = 0x0000) override;
 
   private:
     SDL_Window* window_{ nullptr };

@@ -7,15 +7,14 @@ list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/main.cc")
 
 add_executable(Test_Suite ${sources} ${test_sources})
 
-target_include_directories(Test_Suite PUBLIC fmt::fmt matchit)
+target_include_directories(Test_Suite PUBLIC matchit)
 
-target_link_libraries(Test_Suite PUBLIC doctest::doctest fmt::fmt matchit)
+target_link_libraries(Test_Suite PUBLIC doctest::doctest matchit)
 
 # Propagate SDL2 into the test suite when the SDL2 display backend is active
 if(LUYA_USE_SDL2)
   target_compile_definitions(Test_Suite PUBLIC LUYA_USE_SDL2)
-  target_include_directories(Test_Suite PUBLIC ${SDL2_INCLUDE_DIRS})
-  target_link_libraries(Test_Suite PUBLIC ${SDL2_LIBRARIES})
+  target_link_libraries(Test_Suite PUBLIC ${LUYA_SDL2_TARGET})
 endif()
 
 set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 23 OUTPUT_NAME

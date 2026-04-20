@@ -23,7 +23,7 @@ namespace luya {
  * @brief
  *   SdFat storage component
  *
- *   Wraps SdFs for access to the Teensy 4.1 built-in SDIO SD card slot.
+ *   SdFs wrapper for access to the Teensy 4.1 built-in SDIO SD card slot.
  *   Uses FIFO_SDIO mode for maximum throughput.
  *
  *   In SDL2 builds this is a no-op so the engine

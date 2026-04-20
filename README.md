@@ -71,7 +71,7 @@ brew install sdl2
 Then build:
 
 ```bash
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSDL2_DIR=$(brew --prefix sdl2)/lib/cmake/SDL2
 cmake --build build
 ./build/luya
 ```
@@ -148,7 +148,9 @@ If Teensyduino is not installed at the default Arduino.app path, override with:
 
 ## Dependencies
 
-Teensy libraries (provided by Teensyduino, resolved via `cmake/teensy.cmake`):
+- `ETLCPP` - [Embedded Template Library](https://www.etlcpp.com/)
+
+Teensy libraries
 
 - `teensy4_core` — Teensy 4.1 hardware abstraction and startup
 - `ILI9341_t3` / `ILI9341_t3n` — ILI9341 TFT display drivers
@@ -158,9 +160,7 @@ Teensy libraries (provided by Teensyduino, resolved via `cmake/teensy.cmake`):
 Host-only dependencies
 
 - `doctest` — Fast, header-only testing framework
-- `fmt` — Fast, type-safe formatting library
 - `matchit` — Pattern matching for C++
-- `cmake-scripts` — Additional CMake utilities
 - `SDL2` — Default display driver for local development
 
 ## Licensing

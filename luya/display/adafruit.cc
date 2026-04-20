@@ -26,9 +26,9 @@ void Adafruit_Display::init()
     clear();
 }
 
-void Adafruit_Display::clear(uint16_t colour)
+void Adafruit_Display::clear(uint16_t color)
 {
-    tft_.fillScreen(colour);
+    tft_.fillScreen(color);
 }
 
 } // namespace luya::display

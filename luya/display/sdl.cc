@@ -32,24 +32,24 @@ SDL_Display::~SDL_Display()
 void SDL_Display::init()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    window_ = SDL_CreateWindow("Luya \xe2\x80\x94 SDL2 Mock Display",
+    window_ = SDL_CreateWindow("Luya \xe2\x80\x94 SDL2 Display",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         config::width * config::scale,
         config::height * config::scale,
         SDL_WINDOW_SHOWN);
     renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
-    // Logical size matches the ILI9341 panel; SDL handles upscaling
+    // SDL handles upscaling
     SDL_RenderSetLogicalSize(renderer_, config::width, config::height);
     clear();
 }
 
-void SDL_Display::clear(uint16_t colour)
+void SDL_Display::clear(uint16_t color)
 {
     // Expand RGB565 to RGB888
-    uint8_t const r = static_cast<uint8_t>(((colour >> 11) & 0x1F) << 3);
-    uint8_t const g = static_cast<uint8_t>(((colour >> 5) & 0x3F) << 2);
-    uint8_t const b = static_cast<uint8_t>((colour & 0x1F) << 3);
+    uint8_t const r = static_cast<uint8_t>(((color >> 11) & 0x1F) << 3);
+    uint8_t const g = static_cast<uint8_t>(((color >> 5) & 0x3F) << 2);
+    uint8_t const b = static_cast<uint8_t>((color & 0x1F) << 3);
     SDL_SetRenderDrawColor(renderer_, r, g, b, 0xFF);
     SDL_RenderClear(renderer_);
     SDL_RenderPresent(renderer_);

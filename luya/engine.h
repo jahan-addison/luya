@@ -24,7 +24,7 @@ namespace luya {
  * @brief
  *   Luya 2D Engine
  *
- *   Owns the display, audio, and storage components. Construct once,
+ *   Controlsthe display, audio, and storage components. Construct once,
  *   call init() from Teensy setup(), and tick() on every loop() iteration.
  *
  *   The display driver is selected at compile time via display::make()

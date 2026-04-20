@@ -41,19 +41,37 @@ endif()
 if(NOT CMAKE_CROSSCOMPILING)
   cpmaddpackage("gh:StableCoder/cmake-scripts#24.04")
   cpmaddpackage("gh:TheLartians/PackageProject.cmake@1.8.0")
-
+  cpmaddpackage(NAME matchit VERSION 1.0.1 GITHUB_REPOSITORY
+                BowenFu/matchit.cpp)
   cpmaddpackage("gh:doctest/doctest@2.4.12")
 
   include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
 
-  cpmaddpackage(NAME matchit VERSION 1.0.1 GITHUB_REPOSITORY
-                BowenFu/matchit.cpp)
-  cpmaddpackage("gh:fmtlib/fmt#12.1.0")
-
-  # SDL2 is required when LUYA_USE_SDL2 is ON
   if(LUYA_USE_SDL2)
-    find_package(SDL2 REQUIRED)
+    find_package(SDL2 CONFIG QUIET)
+    if(SDL2_FOUND)
+      set(LUYA_SDL2_TARGET SDL2::SDL2)
+      message(STATUS "SDL2 found via CMake config: ${SDL2_VERSION}")
+    else()
+      find_package(PkgConfig REQUIRED)
+      pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+      set(LUYA_SDL2_TARGET PkgConfig::SDL2)
+      message(STATUS "SDL2 found via pkg-config: ${SDL2_VERSION}")
+    endif()
+    get_target_property(_sdl2_incs ${LUYA_SDL2_TARGET}
+                        INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(_inc IN LISTS _sdl2_incs)
+      if(_inc MATCHES "SDL2$")
+        get_filename_component(_parent "${_inc}" DIRECTORY)
+        set_property(
+          TARGET ${LUYA_SDL2_TARGET}
+          APPEND
+          PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${_parent}")
+      endif()
+    endforeach()
   endif()
+else()
+  cpmaddpackage("gh:ETLCPP/etl#20.47.1")
 endif()
 
 # ##############################################################################
@@ -65,9 +83,7 @@ if(MSVC)
       "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /utf-8 /DEBUG /D_CRT_SECURE_NO_DEPRECATE /W4 /WX"
   )
 elseif(CMAKE_CROSSCOMPILING)
-  # Cross-compiling for Teensy 4.1: MCU flags come from
-  # toolchain-teensy41.cmake; keep warnings but omit host-only optimization
-  # flags.
+  # Cross-compiling for Teensy 4.1: MCU flags come from toolchain-teensy41.cmake
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS
         "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -Wpedantic -DDEBUG")
@@ -131,14 +147,14 @@ target_include_directories(
 
 if(CMAKE_CROSSCOMPILING)
   luya_add_teensy_target(${PROJECT_NAME})
+  target_link_libraries(${PROJECT_NAME} PUBLIC etl)
 else()
-  target_include_directories(${PROJECT_NAME} PUBLIC fmt::fmt matchit)
-  target_link_libraries(${PROJECT_NAME} PUBLIC fmt::fmt matchit)
+  target_include_directories(${PROJECT_NAME} PUBLIC matchit)
+  target_link_libraries(${PROJECT_NAME} PUBLIC matchit)
 
   if(LUYA_USE_SDL2)
     target_compile_definitions(${PROJECT_NAME} PUBLIC LUYA_USE_SDL2)
-    target_include_directories(${PROJECT_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${LUYA_SDL2_TARGET})
     message(STATUS "luya: SDL2 display backend enabled")
   endif()
 

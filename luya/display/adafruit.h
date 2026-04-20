@@ -61,7 +61,7 @@ class Adafruit_Display : public Display
 
   public:
     void init() override;
-    void clear(uint16_t colour = 0x0000) override;
+    void clear(uint16_t color = 0x0000) override;
 
   private:
 #if defined(LUYA_USE_ILI9341_T3N)
