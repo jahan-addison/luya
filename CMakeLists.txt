@@ -38,6 +38,8 @@ else()
   option(LUYA_USE_SDL2 "Use SDL2 display (default for host builds)" OFF)
 endif()
 
+cpmaddpackage("gh:ETLCPP/etl#20.47.1")
+
 if(NOT CMAKE_CROSSCOMPILING)
   cpmaddpackage("gh:StableCoder/cmake-scripts#24.04")
   cpmaddpackage("gh:TheLartians/PackageProject.cmake@1.8.0")
@@ -70,8 +72,6 @@ if(NOT CMAKE_CROSSCOMPILING)
       endif()
     endforeach()
   endif()
-else()
-  cpmaddpackage("gh:ETLCPP/etl#20.47.1")
 endif()
 
 # ##############################################################################
@@ -145,9 +145,10 @@ target_include_directories(
   PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}>
          $<INSTALL_INTERFACE:${PROJECT_NAME}-${PROJECT_VERSION}>)
 
+target_link_libraries(${PROJECT_NAME} PUBLIC etl)
+
 if(CMAKE_CROSSCOMPILING)
   luya_add_teensy_target(${PROJECT_NAME})
-  target_link_libraries(${PROJECT_NAME} PUBLIC etl)
 else()
   target_include_directories(${PROJECT_NAME} PUBLIC matchit)
   target_link_libraries(${PROJECT_NAME} PUBLIC matchit)
