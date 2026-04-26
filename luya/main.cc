@@ -11,7 +11,9 @@
  * for the full text of these licenses.
  ****************************************************************************/
 
-#include <luya/engine.h> // for Engine
+#include <luya/engine.h>        // for Engine
+#include <luya/physics/math.h>  // for Vec2
+#include <luya/physics/world.h> // for World
 
 /*****************************************************
  *   _   _   _ __   __ _
@@ -24,33 +26,11 @@
  *          on Teensy 4.1
  *****************************************************/
 
-#if defined(LUYA_USE_SDL2)
+// Teensy entry point — game logic goes here.
+// For the SDL2 host sample see sample/main.cc.
 
-#include <SDL2/SDL.h> // for SDL_PollEvent, SDL_QUIT
-
-int main()
-{
-    luya::Engine engine;
-    engine.init();
-
-    SDL_Event event;
-    bool running = true;
-    while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-            }
-        }
-        engine.tick();
-    }
-
-    return 0;
-}
-
-#else
-
-// Teensy entry point
 static luya::Engine engine;
+static luya::physics::World world({ 0.0f, -10.0f }, 10);
 
 void setup()
 {
@@ -59,7 +39,6 @@ void setup()
 
 void loop()
 {
-    engine.tick();
+    world.step(1.0f / 60.0f);
+    engine.tick(world);
 }
-
-#endif

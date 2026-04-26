@@ -18,6 +18,16 @@
 
 struct SDL_Window;
 struct SDL_Renderer;
+struct SDL_Texture;
+
+/****************************************************************************
+ * SDL_Display
+ *
+ * SDL2 display driver for host (macOS, Linux, Windows) development.
+ * Opens a desktop window at 320x240 scaled up by config::scale, creates
+ * a streaming RGB565 texture, and presents via SDL_RenderCopy each frame.
+ *
+ ****************************************************************************/
 
 namespace luya::display {
 
@@ -26,7 +36,7 @@ namespace luya::display {
  *   SDL2 display driver
  *
  *   Opens a desktop window at the ILI9341 logical resolution (320×240)
- *   scaled up by config::scale
+ *   scaled up by config::scale.
  *
  */
 class SDL_Display : public Display
@@ -38,10 +48,12 @@ class SDL_Display : public Display
   public:
     void init() override;
     void clear(uint16_t color = 0x0000) override;
+    void blit(frame_buffer_t const* framebuffer, int len) override;
 
   private:
     SDL_Window* window_{ nullptr };
     SDL_Renderer* renderer_{ nullptr };
+    SDL_Texture* texture_{ nullptr };
 };
 
 } // namespace luya::display

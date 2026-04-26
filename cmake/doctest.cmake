@@ -3,28 +3,13 @@ cmake_minimum_required(VERSION 3.16...3.29)
 option(ENABLE_TEST_COVERAGE "Enable test coverage" OFF)
 option(TEST_INSTALLED_VERSION "Test the version found by find_package" ON)
 
-list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/main.cc")
+# Test suite links against the engine library — no need to recompile sources
+add_executable(Test_Suite ${test_sources})
 
-add_executable(Test_Suite ${sources} ${test_sources})
-
-target_include_directories(Test_Suite PUBLIC matchit etl)
-
-target_link_libraries(Test_Suite PUBLIC doctest::doctest matchit etl)
-
-# Propagate SDL2 into the test suite when the SDL2 display backend is active
-if(LUYA_USE_SDL2)
-  target_compile_definitions(Test_Suite PUBLIC LUYA_USE_SDL2)
-  target_link_libraries(Test_Suite PUBLIC ${LUYA_SDL2_TARGET})
-endif()
+target_link_libraries(Test_Suite PUBLIC luya_engine doctest::doctest)
 
 set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 23 OUTPUT_NAME
                                                             "test_suite")
-
-target_include_directories(
-  Test_Suite
-  PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:${PROJECT_NAME}-${PROJECT_VERSION}>)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   target_compile_options(

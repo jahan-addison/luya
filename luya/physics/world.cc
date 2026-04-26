@@ -18,38 +18,67 @@
 #include <etl/map.h>              // for map, operator!=, operator==
 #include <etl/utility.h>          // for pair
 #include <etl/vector.h>           // for vector
-#include <luya/physics/arbiter.h> // for ArbiterKey, operator<, Arbiter
+#include <luya/physics/arbiter.h> // for Arbiter_Key, operator<, Arbiter
 #include <luya/physics/body.h>    // for Body
 #include <luya/physics/joint.h>   // for Joint
 #include <luya/physics/math.h>    // for Vec2, operator*, operator+
 
+/****************************************************************************
+ * World
+ *
+ * Simulates a set of rigid bodies and constraints under gravity using
+ * sequential impulse solving over a fixed timestep. add bodies and joints
+ * with add(), then drive the simulation by calling step(dt) once per frame.
+ *
+ *  Example:
+ *
+ *   physics::World world({ 0.0f, -10.0f }, 10);
+ *
+ *   physics::Body floor;
+ *   floor.position = { 0.0f, -4.0f };   // static, inv_mass = 0
+ *
+ *   physics::Body box;
+ *   box.set({ 0.5f, 0.5f }, 1.0f);
+ *   box.position = { 0.0f, 2.0f };
+ *
+ *   world.add(&floor);
+ *   world.add(&box);
+ *
+ *   world.step(1.0f / 60.0f);  // advance one frame at 60 Hz
+ *
+ * Collision detection runs in broad_phase() and produces Arbiter entries.
+ * world.arbiters is non-empty for each active overlapping body pair this
+ * step. Call clear() to remove all bodies and joints between scenes.
+ *
+ ****************************************************************************/
+
 namespace luya::physics {
 
-typedef etl::map<ArbiterKey, Arbiter, MAX_PHYSICS_BODIES>::iterator ArbIter;
-typedef etl::pair<ArbiterKey, Arbiter> ArbPair;
+typedef etl::map<Arbiter_Key, Arbiter, MAX_PHYSICS_BODIES>::iterator ArbIter;
+typedef etl::pair<Arbiter_Key, Arbiter> ArbPair;
 
-bool World::accumulateImpulses = true;
-bool World::warmStarting = true;
-bool World::positionCorrection = true;
+bool World::accumulate_impulses = true;
+bool World::warm_starting = true;
+bool World::position_correction = true;
 
-void World::Add(Body* body)
+void World::add(Body* body)
 {
     bodies.push_back(body);
 }
 
-void World::Add(Joint* joint)
+void World::add(Joint* joint)
 {
     joints.push_back(joint);
 }
 
-void World::Clear()
+void World::clear()
 {
     bodies.clear();
     joints.clear();
     arbiters.clear();
 }
 
-void World::BroadPhase()
+void World::broad_phase()
 {
     // O(n^2) broad-phase
     for (int i = 0; i < (int)bodies.size(); ++i) {
@@ -58,18 +87,18 @@ void World::BroadPhase()
         for (int j = i + 1; j < (int)bodies.size(); ++j) {
             Body* bj = bodies[j];
 
-            if (bi->invMass == 0.0f && bj->invMass == 0.0f)
+            if (bi->inv_mass == 0.0f && bj->inv_mass == 0.0f)
                 continue;
 
-            Arbiter newArb(bi, bj);
-            ArbiterKey key(bi, bj);
+            Arbiter new_arb(bi, bj);
+            Arbiter_Key key(bi, bj);
 
-            if (newArb.numContacts > 0) {
+            if (new_arb.num_contacts > 0) {
                 ArbIter iter = arbiters.find(key);
                 if (iter == arbiters.end()) {
-                    arbiters.insert(ArbPair(key, newArb));
+                    arbiters.insert(ArbPair(key, new_arb));
                 } else {
-                    iter->second.Update(newArb.contacts, newArb.numContacts);
+                    iter->second.update(new_arb.contacts, new_arb.num_contacts);
                 }
             } else {
                 arbiters.erase(key);
@@ -78,41 +107,41 @@ void World::BroadPhase()
     }
 }
 
-void World::Step(float dt)
+void World::step(float dt)
 {
     float inv_dt = dt > 0.0f ? 1.0f / dt : 0.0f;
 
     // Determine overlapping bodies and update contact points.
-    BroadPhase();
+    broad_phase();
 
     // Integrate forces.
     for (int i = 0; i < (int)bodies.size(); ++i) {
         Body* b = bodies[i];
 
-        if (b->invMass == 0.0f)
+        if (b->inv_mass == 0.0f)
             continue;
 
-        b->velocity += dt * (gravity + b->invMass * b->force);
-        b->angularVelocity += dt * b->invI * b->torque;
+        b->velocity += dt * (gravity + b->inv_mass * b->force);
+        b->angular_velocity += dt * b->inv_i * b->torque;
     }
 
     // Perform pre-steps.
     for (ArbIter arb = arbiters.begin(); arb != arbiters.end(); ++arb) {
-        arb->second.PreStep(inv_dt);
+        arb->second.pre_step(inv_dt);
     }
 
     for (int i = 0; i < (int)joints.size(); ++i) {
-        joints[i]->PreStep(inv_dt);
+        joints[i]->pre_step(inv_dt);
     }
 
     // Perform iterations
     for (int i = 0; i < iterations; ++i) {
         for (ArbIter arb = arbiters.begin(); arb != arbiters.end(); ++arb) {
-            arb->second.ApplyImpulse();
+            arb->second.apply_impulse();
         }
 
         for (int j = 0; j < (int)joints.size(); ++j) {
-            joints[j]->ApplyImpulse();
+            joints[j]->apply_impulse();
         }
     }
 
@@ -121,9 +150,9 @@ void World::Step(float dt)
         Body* b = bodies[i];
 
         b->position += dt * b->velocity;
-        b->rotation += dt * b->angularVelocity;
+        b->rotation += dt * b->angular_velocity;
 
-        b->force.Set(0.0f, 0.0f);
+        b->force.set(0.0f, 0.0f);
         b->torque = 0.0f;
     }
 }

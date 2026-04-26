@@ -11,28 +11,30 @@
  * for the full text of these licenses.
  ****************************************************************************/
 
-#include <luya/audio.h>
+#pragma once
 
-/****************************************************************************
- * Audio
- *
- * Allocates Teensy audio library memory blocks and enables the SGTL5000
- * codec at 50% volume. Both calls are no-ops in SDL2 (host) builds.
- *
- ****************************************************************************/
+#include <cstdint> // for uint16_t
 
 namespace luya {
 
 /**
- * @brief Allocate audio buffers and start the codec (no-op on host)
+ * @brief
+ *   RGB565 sprite descriptor
+ *
+ *   A non-owning view into pixel data managed by the Storage pool. The
+ *   pixel data is row-major RGB565. On Teensy the pool lives in DMAMEM;
+ *   on host it is a plain static array.
+ *
+ *   Sprite file format (raw binary):
+ *     uint16_t  width
+ *     uint16_t  height
+ *     uint16_t  pixels[width * height]   (row-major, RGB565)
  */
-void Audio::init()
+struct Sprite
 {
-#if defined(__IMXRT1062__)
-    AudioMemory(k_audio_memory_blocks);
-    codec_.enable();
-    codec_.volume(0.5f);
-#endif
-}
+    const uint16_t* data; // row-major RGB565 pixels; nullptr on load failure
+    uint16_t width;
+    uint16_t height;
+};
 
 } // namespace luya

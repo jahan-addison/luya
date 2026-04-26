@@ -15,8 +15,13 @@
 
 #include <luya/audio.h>           // for Audio
 #include <luya/display/display.h> // for Display
+#include <luya/renderer.h>        // for Renderer
 #include <luya/storage.h>         // for Storage
 #include <memory>                 // for unique_ptr
+
+namespace luya::physics {
+class World;
+} // namespace luya::physics
 
 namespace luya {
 
@@ -24,7 +29,7 @@ namespace luya {
  * @brief
  *   Luya 2D Engine
  *
- *   Controlsthe display, audio, and storage components. Construct once,
+ *   Controls the display, audio, and storage components. Construct once,
  *   call init() from Teensy setup(), and tick() on every loop() iteration.
  *
  *   The display driver is selected at compile time via display::make()
@@ -34,6 +39,7 @@ class Engine
   public:
     Engine()
         : display_(display::make())
+        , renderer_(*display_)
     {
     }
     Engine(Engine const&) = delete;
@@ -41,10 +47,14 @@ class Engine
 
   public:
     void init();
-    void tick();
+    void tick(physics::World& world);
+
+    Renderer& renderer() { return renderer_; }
+    Storage& storage() { return storage_; }
 
   private:
     std::unique_ptr<display::Display> display_;
+    Renderer renderer_;
     Audio audio_;
     Storage storage_;
 };

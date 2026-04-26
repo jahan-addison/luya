@@ -15,6 +15,8 @@
 
 #include <luya/audio.h>           // for Audio
 #include <luya/display/display.h> // for Display
+#include <luya/physics/world.h>   // for World
+#include <luya/renderer.h>        // for Renderer
 #include <luya/storage.h>         // for Storage
 
 namespace luya {
@@ -32,9 +34,11 @@ void Engine::init()
 /**
  * @brief Per-frame update, drive rendering and logic each loop() tick
  */
-void Engine::tick()
+void Engine::tick(physics::World& world)
 {
-    display_->clear();
+    renderer_.clear();
+    renderer_.draw(world);
+    renderer_.render();
 }
 
 } // namespace luya

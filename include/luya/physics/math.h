@@ -20,10 +20,25 @@
 #include <math.h>
 #include <stdlib.h>
 
+/****************************************************************************
+ * Math
+ *
+ * 2D math primitives for the physics engine. Vec2 is a two-component
+ * float vector; Mat22 is a 2x2 rotation matrix constructed from an angle.
+ *
+ * Free functions: dot(), cross(), abs_val(), sign(), min_val(), max_val(),
+ * clamp(), swap_val(), and random().
+ *
+ ****************************************************************************/
+
 namespace luya::physics {
 
 constexpr float k_pi = 3.14159265358979323846264f;
 
+/**
+ * @brief
+ * Two-component float vector with arithmetic operators and length().
+ */
 class Vec2
 {
   public:
@@ -39,7 +54,7 @@ class Vec2
     }
 
   public:
-    void Set(float x_, float y_)
+    void set(float x_, float y_)
     {
         x = x_;
         y = y_;
@@ -65,11 +80,15 @@ class Vec2
         y *= a;
     }
 
-    float Length() const { return sqrtf(x * x + y * y); }
+    float length() const { return sqrtf(x * x + y * y); }
 
     float x, y;
 };
 
+/**
+ * @brief
+ * 2x2 rotation matrix. Construct from an angle (radians) or two column Vec2s.
+ */
 class Mat22
 {
   public:
@@ -90,12 +109,12 @@ class Mat22
     }
 
   public:
-    Mat22 Transpose() const
+    Mat22 transpose() const
     {
         return Mat22(Vec2(col1.x, col2.x), Vec2(col1.y, col2.y));
     }
 
-    Mat22 Invert() const
+    Mat22 invert() const
     {
         float a = col1.x, b = col2.x, c = col1.y, d = col2.y;
         Mat22 B;
@@ -112,22 +131,22 @@ class Mat22
     Vec2 col1, col2;
 };
 
-inline float Dot(const Vec2& a, const Vec2& b)
+inline float dot(const Vec2& a, const Vec2& b)
 {
     return a.x * b.x + a.y * b.y;
 }
 
-inline float Cross(const Vec2& a, const Vec2& b)
+inline float cross(const Vec2& a, const Vec2& b)
 {
     return a.x * b.y - a.y * b.x;
 }
 
-inline Vec2 Cross(const Vec2& a, float s)
+inline Vec2 cross(const Vec2& a, float s)
 {
     return Vec2(s * a.y, -s * a.x);
 }
 
-inline Vec2 Cross(float s, const Vec2& a)
+inline Vec2 cross(float s, const Vec2& a)
 {
     return Vec2(-s * a.y, s * a.x);
 }
@@ -163,51 +182,51 @@ inline Mat22 operator*(const Mat22& A, const Mat22& B)
     return Mat22(A * B.col1, A * B.col2);
 }
 
-inline float Abs(float a)
+inline float abs_val(float a)
 {
     return a > 0.0f ? a : -a;
 }
 
-inline Vec2 Abs(const Vec2& a)
+inline Vec2 abs_val(const Vec2& a)
 {
     return Vec2(fabsf(a.x), fabsf(a.y));
 }
 
-inline Mat22 Abs(const Mat22& A)
+inline Mat22 abs_val(const Mat22& A)
 {
-    return Mat22(Abs(A.col1), Abs(A.col2));
+    return Mat22(abs_val(A.col1), abs_val(A.col2));
 }
 
-inline float Sign(float x)
+inline float sign(float x)
 {
     return x < 0.0f ? -1.0f : 1.0f;
 }
 
-inline float Min(float a, float b)
+inline float min_val(float a, float b)
 {
     return a < b ? a : b;
 }
 
-inline float Max(float a, float b)
+inline float max_val(float a, float b)
 {
     return a > b ? a : b;
 }
 
-inline float Clamp(float a, float low, float high)
+inline float clamp(float a, float low, float high)
 {
-    return Max(low, Min(a, high));
+    return max_val(low, min_val(a, high));
 }
 
 template<typename T>
-inline void Swap(T& a, T& b)
+inline void swap_val(T& a, T& b)
 {
     T tmp = a;
     a = b;
     b = tmp;
 }
 
-// Random number in range [-1,1]
-inline float Random()
+// random number in range [-1,1]
+inline float random()
 {
     float r = (float)rand();
     r /= (float)RAND_MAX;
@@ -215,7 +234,7 @@ inline float Random()
     return r;
 }
 
-inline float Random(float lo, float hi)
+inline float random(float lo, float hi)
 {
     float r = (float)rand();
     r /= (float)RAND_MAX;

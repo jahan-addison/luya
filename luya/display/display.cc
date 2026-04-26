@@ -21,10 +21,26 @@
 #include <luya/display/sdl.h> // for SDL_Display
 #endif
 
+/****************************************************************************
+ * Display
+ *
+ * Abstract display driver interface and compile-time dimensions.
+ * config:: holds the ILI9341 native resolution (320x240) and the SDL2
+ * desktop scale factor. display::make() returns the platform-appropriate
+ * driver.
+ *
+ *  Example:
+ *
+ *   auto display = luya::display::make();
+ *   display->init();
+ *   display->blit(framebuffer, config::width * config::height);
+ *
+ ****************************************************************************/
+
 namespace luya::display {
 
 /**
- * @brief Compile-time factory
+ * @brief Return the platform-appropriate display driver
  */
 std::unique_ptr<Display> make()
 {

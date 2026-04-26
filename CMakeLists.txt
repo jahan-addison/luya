@@ -43,8 +43,6 @@ cpmaddpackage("gh:ETLCPP/etl#20.47.1")
 if(NOT CMAKE_CROSSCOMPILING)
   cpmaddpackage("gh:StableCoder/cmake-scripts#24.04")
   cpmaddpackage("gh:TheLartians/PackageProject.cmake@1.8.0")
-  cpmaddpackage(NAME matchit VERSION 1.0.1 GITHUB_REPOSITORY
-                BowenFu/matchit.cpp)
   cpmaddpackage("gh:doctest/doctest@2.4.12")
 
   include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
@@ -72,6 +70,16 @@ if(NOT CMAKE_CROSSCOMPILING)
       endif()
     endforeach()
   endif()
+
+  cpmaddpackage(
+    NAME
+    stb
+    GITHUB_REPOSITORY
+    nothings/stb
+    GIT_TAG
+    master
+    DOWNLOAD_ONLY
+    YES)
 endif()
 
 # ##############################################################################
@@ -138,27 +146,46 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS
      "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
 
-add_executable(${PROJECT_NAME} ${sources} ${headers})
+# main.cc is the Teensy entry point, and excluded from the engine library
+list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/main.cc")
+
+# Engine as a static library — games link against luya::engine
+add_library(luya_engine STATIC ${sources} ${headers})
+add_library(luya::engine ALIAS luya_engine)
 
 target_include_directories(
-  ${PROJECT_NAME}
+  luya_engine
   PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<INSTALL_INTERFACE:${PROJECT_NAME}-${PROJECT_VERSION}>)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC etl)
+target_link_libraries(luya_engine PUBLIC etl)
 
 if(CMAKE_CROSSCOMPILING)
-  luya_add_teensy_target(${PROJECT_NAME})
+  luya_add_teensy_target(luya_engine)
+
+  # Teensy executable
+  add_executable(${PROJECT_NAME}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/main.cc")
+  target_link_libraries(${PROJECT_NAME} PRIVATE luya_engine)
 else()
-  target_include_directories(${PROJECT_NAME} PUBLIC matchit)
-  target_link_libraries(${PROJECT_NAME} PUBLIC matchit)
+  if(stb_ADDED)
+    target_include_directories(luya_engine PRIVATE "${stb_SOURCE_DIR}")
+  endif()
 
   if(LUYA_USE_SDL2)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC LUYA_USE_SDL2)
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${LUYA_SDL2_TARGET})
+    target_compile_definitions(luya_engine PUBLIC LUYA_USE_SDL2)
+    target_link_libraries(luya_engine PUBLIC ${LUYA_SDL2_TARGET})
     message(STATUS "luya: SDL2 display backend enabled")
   endif()
+
+  # Sample executable — demonstrates the engine with sprites + physics
+  add_executable(sample "${CMAKE_CURRENT_SOURCE_DIR}/sample/main.cc")
+  target_link_libraries(sample PRIVATE luya_engine)
+  set_target_properties(sample PROPERTIES OUTPUT_NAME "sample_game")
+
+  file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/sample/images"
+       DESTINATION "${CMAKE_BINARY_DIR}/sample")
 
   include(cmake/doctest.cmake)
 endif()

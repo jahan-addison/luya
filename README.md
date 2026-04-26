@@ -41,11 +41,11 @@ The engine is structured around three components:
 
 | Component | Class | Library |
 |-----------|-------|---------|
-| Display | `luya::display::Display` |
+| Display | `luya::display::Display` | ILI9341_t3 / SDL2 |
 | Audio | `luya::Audio` | Teensy Audio Library |
-| Storage | `luya::Storage` | SdFat |
+| Storage | `luya::Storage` | SdFat / stb_image |
 
-`Engine::init()` is called from Teensy `setup()` and `Engine::tick()` from `loop()`.
+`Engine::init()` is called from Teensy `setup()` and `Engine::tick(world)` from `loop()`. On the host the SDL2 game loop drives both.
 
 ### Display drivers
 
@@ -57,6 +57,117 @@ The display component is polymorphic and defaults to `SDL2`, the drivers live in
 | SDL2 | `SDL_Display` | Local development |
 
 The SDL2 driver opens a desktop window at the ILI9341 native resolution (320×240) scaled up by `config::scale` (3×, 960×720). `SDL_RenderSetLogicalSize` ensures all draw calls use the same coordinate space as the Adafruit.
+
+## Usage
+
+### Using as a library
+
+Link against `luya::engine` in your `CMakeLists.txt`:
+
+```cmake
+add_subdirectory(luya)          # or use CPM / FetchContent
+target_link_libraries(my_game PRIVATE luya::engine)
+```
+
+A minimal game loop:
+
+```cpp
+#include <luya/engine.h>
+#include <luya/physics/world.h>
+
+luya::Engine engine{};
+luya::physics::World world({ 0.0f, -10.0f }, 10);
+
+engine.init();
+
+while (running) {
+    world.step(1.0f / 60.0f);
+    engine.tick(world);
+}
+```
+
+## Overview
+
+### Physics
+
+The physics module is a heavily edited port of box2d-lite using sequential impulse constraint solving over a fixed timestep. Dynamic allocation has been replaced with ETL fixed-size containers.
+
+#### Bodies
+
+A `Body` is axis-aligned and box-shaped, `width` holds the half-extents. A default-constructed body is static (infinite mass):
+
+```cpp
+physics::Body floor;
+floor.position = { 0.0f, -4.0f };   // static — inv_mass = 0 by default
+floor.width    = { 5.0f, 0.5f };    // 10x1 unit platform
+
+physics::Body box;
+box.set({ 0.5f, 0.5f }, 2.0f);      // 1x1 unit box, 2 kg
+box.position = { 0.0f, 3.0f };
+box.add_force({ 1.0f, 0.0f });       // nudge right
+```
+
+#### World
+
+`World` holds the body and joint lists and runs the solver:
+
+```cpp
+physics::World world({ 0.0f, -10.0f }, 10);  // gravity, solver iterations
+
+world.add(&floor);
+world.add(&box);
+
+world.step(1.0f / 60.0f);   // advance one 60 Hz tick
+```
+
+`world.arbiters` is non-empty for every active contact pair after each `step()`. Use it to detect collision:
+
+```cpp
+if (!world.arbiters.empty()) {
+    // at least one contact is active this step
+}
+```
+
+#### Joints
+
+A `Joint` maintains a fixed distance between two bodies at a world-space anchor:
+
+```cpp
+physics::Joint hinge;
+hinge.set(&body_a, &body_b, { 0.0f, 1.0f });
+world.add(&hinge);
+```
+
+`bias_factor` (default 0.2) controls position correction strength; `softness` (default 0.0) adds compliance.
+
+### Renderer and sprites
+
+The `Renderer` owns a full-screen RGB565 framebuffer. Each frame does clear, draw, render:
+
+```cpp
+auto& renderer = engine.renderer();
+
+renderer.clear();
+renderer.add_sprite(&my_sprite, x, y);   // queue sprites before draw
+// engine.tick() calls draw() + render() internally
+```
+
+Load sprites via `Storage::load_sprite()`. On the host any image format supported by stb_image works; the image is nearest-neighbour scaled to the requested dimensions and converted to RGB565:
+
+```cpp
+luya::Sprite s = engine.storage().load_sprite("hero.png", 32, 32);
+```
+
+On Teensy, `load_sprite` reads the raw binary format (uint16_t width, uint16_t height, then width×height RGB565 pixels) from the SD card.
+
+Use `Renderer::world_to_screen()` to convert a physics body position to a pixel coordinate:
+
+```cpp
+auto [sx, sy] = renderer.world_to_screen(body.position.x, body.position.y);
+renderer.add_sprite(&sprite,
+    static_cast<int16_t>(sx - sprite.width  / 2),
+    static_cast<int16_t>(sy - sprite.height / 2));
+```
 
 ## Build
 
@@ -149,6 +260,7 @@ If Teensyduino is not installed at the default Arduino.app path, override with:
 ## Dependencies
 
 - `ETLCPP` - [Embedded Template Library](https://www.etlcpp.com/)
+- `box2d-lite` Heavily modified port of [box2d-lite](https://github.com/erincatto/box2d-lite) for embedded devices
 
 Teensy libraries
 
@@ -159,8 +271,6 @@ Teensy libraries
 
 Host-only dependencies
 
-- `doctest` — Fast, header-only testing framework
-- `matchit` — Pattern matching for C++
 - `SDL2` — Default display driver for local development
 
 ## Licensing

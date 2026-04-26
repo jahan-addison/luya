@@ -17,55 +17,91 @@
 
 #include "math.h"
 
+/****************************************************************************
+ * Arbiter
+ *
+ * Contact manifold between two bodies. An Arbiter is keyed by
+ * a pair of body pointers (Arbiter_Key) and cached in World::arbiters across
+ * frames to support warm-starting.
+ *
+ * Contact points carry accumulated normal impulse pn, tangent impulse pt,
+ * and position-bias impulse pnb. pre_step() computes effective mass and
+ * Baumgarte bias; apply_impulse() resolves the constraint for the current
+ * solver iteration.
+ *
+ * World::broad_phase() creates and updates Arbiters automatically. To detect
+ * that two bodies are in contact, inspect World::arbiters:
+ *
+ *   if (!world.arbiters.empty()) {
+ *       // at least one contact pair is active this step
+ *   }
+ *
+ * You should not need to construct or update Arbiters directly.
+ *
+ ****************************************************************************/
+
 namespace luya::physics {
 
 class Body;
 
-union FeaturePair
+/**
+ * @brief
+ * Encodes which box edges are involved in a contact point.
+ */
+union Feature_Pair
 {
     struct Edges
     {
-        char inEdge1;
-        char outEdge1;
-        char inEdge2;
-        char outEdge2;
+        char in_edge1;
+        char out_edge1;
+        char in_edge2;
+        char out_edge2;
     } e;
     int value;
 };
 
+/**
+ * @brief
+ * A single contact point between two bodies, carrying position, normal,
+ * accumulated impulses, and effective mass.
+ */
 struct Contact
 {
     Contact()
-        : Pn(0.0f)
-        , Pt(0.0f)
-        , Pnb(0.0f)
+        : pn(0.0f)
+        , pt(0.0f)
+        , pnb(0.0f)
         , separation(0.0f)
-        , massNormal(0.0f)
-        , massTangent(0.0f)
+        , mass_normal(0.0f)
+        , mass_tangent(0.0f)
         , bias(0.0f)
         , feature{ .value = 0 }
     {
     }
 
-    float Pn;  // accumulated normal impulse
-    float Pt;  // accumulated tangent impulse
-    float Pnb; // accumulated normal impulse for position bias
+    float pn;  // accumulated normal impulse
+    float pt;  // accumulated tangent impulse
+    float pnb; // accumulated normal impulse for position bias
 
     float separation;
-    float massNormal;
-    float massTangent;
+    float mass_normal;
+    float mass_tangent;
     float bias;
 
-    FeaturePair feature;
+    Feature_Pair feature;
 
     Vec2 position{};
     Vec2 normal{};
     Vec2 r1{}, r2{};
 };
 
-struct ArbiterKey
+/**
+ * @brief
+ * Canonical key for the arbiter map — ordered pair of body pointers.
+ */
+struct Arbiter_Key
 {
-    ArbiterKey(Body* b1, Body* b2)
+    Arbiter_Key(Body* b1, Body* b2)
     {
         if (b1 < b2) {
             body1 = b1;
@@ -80,6 +116,11 @@ struct ArbiterKey
     Body* body2;
 };
 
+/**
+ * @brief
+ * Contact manifold between two bodies. Cached across frames to support
+ * warm-starting; updated each step by World::broad_phase().
+ */
 struct Arbiter
 {
     enum
@@ -89,13 +130,13 @@ struct Arbiter
 
     Arbiter(Body* b1, Body* b2);
 
-    void Update(Contact* contacts, int numContacts);
+    void update(Contact* contacts, int num_contacts);
 
-    void PreStep(float inv_dt);
-    void ApplyImpulse();
+    void pre_step(float inv_dt);
+    void apply_impulse();
 
     Contact contacts[MAX_POINTS];
-    int numContacts;
+    int num_contacts;
 
     Body* body1;
     Body* body2;
@@ -105,7 +146,7 @@ struct Arbiter
 };
 
 // This is used by std::set
-inline bool operator<(const ArbiterKey& a1, const ArbiterKey& a2)
+inline bool operator<(const Arbiter_Key& a1, const Arbiter_Key& a2)
 {
     if (a1.body1 < a2.body1)
         return true;
@@ -116,5 +157,5 @@ inline bool operator<(const ArbiterKey& a1, const ArbiterKey& a2)
     return false;
 }
 
-int Collide(Contact* contacts, Body const* bodyA, Body const* bodyB);
+int collide(Contact* contacts, Body const* bodyA, Body const* bodyB);
 } // namespace physics

@@ -13,8 +13,25 @@
 
 #pragma once
 
-#include <cstdint> // for uint16_t
-#include <memory>  // for unique_ptr
+#include <cstdint>     // for uint16_t
+#include <etl/array.h> // for array
+#include <memory>      // for unique_ptr
+
+/****************************************************************************
+ * Display
+ *
+ * Abstract display driver interface and compile-time dimensions.
+ * config:: holds the ILI9341 native resolution (320x240) and the SDL2
+ * desktop scale factor. display::make() returns the platform-appropriate
+ * driver.
+ *
+ *  Example:
+ *
+ *   auto display = luya::display::make();
+ *   display->init();
+ *   display->blit(framebuffer, config::width * config::height);
+ *
+ ****************************************************************************/
 
 namespace luya::display {
 
@@ -28,9 +45,14 @@ inline constexpr int height = 240;
 inline constexpr int scale = 3; // SDL2 window scale (960x720)
 } // namespace config
 
+template<int x = config::width, int y = config::height>
+using Frame_Buffer = etl::array<uint16_t, x * y>;
+
+using frame_buffer_t = Frame_Buffer<>;
+
 /**
  * @brief
- *   Abstract display driver interface
+ * Abstract display driver
  */
 class Display
 {
@@ -43,15 +65,9 @@ class Display
     Display& operator=(Display const&) = delete;
 
   public:
-    /**
-     * @brief Initialise and configure the display hardware or window
-     */
     virtual void init() = 0;
-
-    /**
-     * @brief Fill the entire screen with a 16-bit RGB565 color
-     */
     virtual void clear(uint16_t color = 0x0000) = 0;
+    virtual void blit(frame_buffer_t const* framebuffer, int len) = 0;
 };
 
 [[nodiscard]] std::unique_ptr<Display> make();

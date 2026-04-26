@@ -16,9 +16,32 @@
 #include <luya/physics/arbiter.h>
 
 #include <luya/physics/body.h>  // for Body
-#include <luya/physics/math.h>  // for Vec2, Cross, Dot, operator*, operator-
+#include <luya/physics/math.h>  // for Vec2, cross, dot, operator*, operator-
 #include <luya/physics/world.h> // for World
 #include <math.h>               // for sqrtf
+
+/****************************************************************************
+ * Arbiter
+ *
+ * Contact manifold between two bodies. An Arbiter is keyed by
+ * a pair of body pointers (Arbiter_Key) and cached in World::arbiters across
+ * frames to support warm-starting.
+ *
+ * Contact points carry accumulated normal impulse pn, tangent impulse pt,
+ * and position-bias impulse pnb. pre_step() computes effective mass and
+ * Baumgarte bias; apply_impulse() resolves the constraint for the current
+ * solver iteration.
+ *
+ * World::broad_phase() creates and updates Arbiters automatically. To detect
+ * that two bodies are in contact, inspect World::arbiters:
+ *
+ *   if (!world.arbiters.empty()) {
+ *       // at least one contact pair is active this step
+ *   }
+ *
+ * You should not need to construct or update Arbiters directly.
+ *
+ ****************************************************************************/
 
 namespace luya::physics {
 
@@ -32,159 +55,159 @@ Arbiter::Arbiter(Body* b1, Body* b2)
         body2 = b1;
     }
 
-    numContacts = Collide(contacts, body1, body2);
+    num_contacts = collide(contacts, body1, body2);
 
     friction = sqrtf(body1->friction * body2->friction);
 }
 
-void Arbiter::Update(Contact* newContacts, int numNewContacts)
+void Arbiter::update(Contact* new_contacts, int num_new_contacts)
 {
-    Contact mergedContacts[2];
+    Contact merged_contacts[2];
 
-    for (int i = 0; i < numNewContacts; ++i) {
-        Contact const* cNew = newContacts + i;
+    for (int i = 0; i < num_new_contacts; ++i) {
+        Contact const* c_new = new_contacts + i;
         int k = -1;
-        for (int j = 0; j < numContacts; ++j) {
-            Contact const* cOld = contacts + j;
-            if (cNew->feature.value == cOld->feature.value) {
+        for (int j = 0; j < num_contacts; ++j) {
+            Contact const* c_old = contacts + j;
+            if (c_new->feature.value == c_old->feature.value) {
                 k = j;
                 break;
             }
         }
 
         if (k > -1) {
-            Contact* c = mergedContacts + i;
-            Contact const* cOld = contacts + k;
-            *c = *cNew;
-            if (World::warmStarting) {
-                c->Pn = cOld->Pn;
-                c->Pt = cOld->Pt;
-                c->Pnb = cOld->Pnb;
+            Contact* c = merged_contacts + i;
+            Contact const* c_old = contacts + k;
+            *c = *c_new;
+            if (World::warm_starting) {
+                c->pn = c_old->pn;
+                c->pt = c_old->pt;
+                c->pnb = c_old->pnb;
             } else {
-                c->Pn = 0.0f;
-                c->Pt = 0.0f;
-                c->Pnb = 0.0f;
+                c->pn = 0.0f;
+                c->pt = 0.0f;
+                c->pnb = 0.0f;
             }
         } else {
-            mergedContacts[i] = newContacts[i];
+            merged_contacts[i] = new_contacts[i];
         }
     }
 
-    for (int i = 0; i < numNewContacts; ++i)
-        contacts[i] = mergedContacts[i];
+    for (int i = 0; i < num_new_contacts; ++i)
+        contacts[i] = merged_contacts[i];
 
-    numContacts = numNewContacts;
+    num_contacts = num_new_contacts;
 }
 
-void Arbiter::PreStep(float inv_dt)
+void Arbiter::pre_step(float inv_dt)
 {
-    const float k_allowedPenetration = 0.01f;
-    float k_biasFactor = World::positionCorrection ? 0.2f : 0.0f;
+    const float k_allowed_penetration = 0.01f;
+    float k_bias_factor = World::position_correction ? 0.2f : 0.0f;
 
-    for (int i = 0; i < numContacts; ++i) {
+    for (int i = 0; i < num_contacts; ++i) {
         Contact* c = contacts + i;
 
         Vec2 r1 = c->position - body1->position;
         Vec2 r2 = c->position - body2->position;
 
         // Precompute normal mass, tangent mass, and bias.
-        float rn1 = Dot(r1, c->normal);
-        float rn2 = Dot(r2, c->normal);
-        float kNormal = body1->invMass + body2->invMass;
-        kNormal += body1->invI * (Dot(r1, r1) - rn1 * rn1) +
-                   body2->invI * (Dot(r2, r2) - rn2 * rn2);
-        c->massNormal = 1.0f / kNormal;
+        float rn1 = dot(r1, c->normal);
+        float rn2 = dot(r2, c->normal);
+        float k_normal = body1->inv_mass + body2->inv_mass;
+        k_normal += body1->inv_i * (dot(r1, r1) - rn1 * rn1) +
+                    body2->inv_i * (dot(r2, r2) - rn2 * rn2);
+        c->mass_normal = 1.0f / k_normal;
 
-        Vec2 tangent = Cross(c->normal, 1.0f);
-        float rt1 = Dot(r1, tangent);
-        float rt2 = Dot(r2, tangent);
-        float kTangent = body1->invMass + body2->invMass;
-        kTangent += body1->invI * (Dot(r1, r1) - rt1 * rt1) +
-                    body2->invI * (Dot(r2, r2) - rt2 * rt2);
-        c->massTangent = 1.0f / kTangent;
+        Vec2 tangent = cross(c->normal, 1.0f);
+        float rt1 = dot(r1, tangent);
+        float rt2 = dot(r2, tangent);
+        float k_tangent = body1->inv_mass + body2->inv_mass;
+        k_tangent += body1->inv_i * (dot(r1, r1) - rt1 * rt1) +
+                     body2->inv_i * (dot(r2, r2) - rt2 * rt2);
+        c->mass_tangent = 1.0f / k_tangent;
 
-        c->bias = -k_biasFactor * inv_dt *
-                  Min(0.0f, c->separation + k_allowedPenetration);
+        c->bias = -k_bias_factor * inv_dt *
+                  min_val(0.0f, c->separation + k_allowed_penetration);
 
-        if (World::accumulateImpulses) {
+        if (World::accumulate_impulses) {
             // Apply normal + friction impulse
-            Vec2 P = c->Pn * c->normal + c->Pt * tangent;
+            Vec2 P = c->pn * c->normal + c->pt * tangent;
 
-            body1->velocity -= body1->invMass * P;
-            body1->angularVelocity -= body1->invI * Cross(r1, P);
+            body1->velocity -= body1->inv_mass * P;
+            body1->angular_velocity -= body1->inv_i * cross(r1, P);
 
-            body2->velocity += body2->invMass * P;
-            body2->angularVelocity += body2->invI * Cross(r2, P);
+            body2->velocity += body2->inv_mass * P;
+            body2->angular_velocity += body2->inv_i * cross(r2, P);
         }
     }
 }
 
-void Arbiter::ApplyImpulse()
+void Arbiter::apply_impulse()
 {
     Body* b1 = body1;
     Body* b2 = body2;
 
-    for (int i = 0; i < numContacts; ++i) {
+    for (int i = 0; i < num_contacts; ++i) {
         Contact* c = contacts + i;
         c->r1 = c->position - b1->position;
         c->r2 = c->position - b2->position;
 
         // Relative velocity at contact
-        Vec2 dv = b2->velocity + Cross(b2->angularVelocity, c->r2) -
-                  b1->velocity - Cross(b1->angularVelocity, c->r1);
+        Vec2 dv = b2->velocity + cross(b2->angular_velocity, c->r2) -
+                  b1->velocity - cross(b1->angular_velocity, c->r1);
 
         // Compute normal impulse
-        float vn = Dot(dv, c->normal);
+        float vn = dot(dv, c->normal);
 
-        float dPn = c->massNormal * (-vn + c->bias);
+        float d_pn = c->mass_normal * (-vn + c->bias);
 
-        if (World::accumulateImpulses) {
-            // Clamp the accumulated impulse
-            float Pn0 = c->Pn;
-            c->Pn = Max(Pn0 + dPn, 0.0f);
-            dPn = c->Pn - Pn0;
+        if (World::accumulate_impulses) {
+            // clamp the accumulated impulse
+            float pn0 = c->pn;
+            c->pn = max_val(pn0 + d_pn, 0.0f);
+            d_pn = c->pn - pn0;
         } else {
-            dPn = Max(dPn, 0.0f);
+            d_pn = max_val(d_pn, 0.0f);
         }
 
         // Apply contact impulse
-        Vec2 Pn = dPn * c->normal;
+        Vec2 pn = d_pn * c->normal;
 
-        b1->velocity -= b1->invMass * Pn;
-        b1->angularVelocity -= b1->invI * Cross(c->r1, Pn);
+        b1->velocity -= b1->inv_mass * pn;
+        b1->angular_velocity -= b1->inv_i * cross(c->r1, pn);
 
-        b2->velocity += b2->invMass * Pn;
-        b2->angularVelocity += b2->invI * Cross(c->r2, Pn);
+        b2->velocity += b2->inv_mass * pn;
+        b2->angular_velocity += b2->inv_i * cross(c->r2, pn);
 
         // Relative velocity at contact
-        dv = b2->velocity + Cross(b2->angularVelocity, c->r2) - b1->velocity -
-             Cross(b1->angularVelocity, c->r1);
+        dv = b2->velocity + cross(b2->angular_velocity, c->r2) - b1->velocity -
+             cross(b1->angular_velocity, c->r1);
 
-        Vec2 tangent = Cross(c->normal, 1.0f);
-        float vt = Dot(dv, tangent);
-        float dPt = c->massTangent * (-vt);
+        Vec2 tangent = cross(c->normal, 1.0f);
+        float vt = dot(dv, tangent);
+        float d_pt = c->mass_tangent * (-vt);
 
-        if (World::accumulateImpulses) {
+        if (World::accumulate_impulses) {
             // Compute friction impulse
-            float maxPt = friction * c->Pn;
+            float max_pt = friction * c->pn;
 
-            // Clamp friction
-            float oldTangentImpulse = c->Pt;
-            c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
-            dPt = c->Pt - oldTangentImpulse;
+            // clamp friction
+            float old_tangent_impulse = c->pt;
+            c->pt = clamp(old_tangent_impulse + d_pt, -max_pt, max_pt);
+            d_pt = c->pt - old_tangent_impulse;
         } else {
-            float maxPt = friction * dPn;
-            dPt = Clamp(dPt, -maxPt, maxPt);
+            float max_pt = friction * d_pn;
+            d_pt = clamp(d_pt, -max_pt, max_pt);
         }
 
         // Apply contact impulse
-        Vec2 Pt = dPt * tangent;
+        Vec2 pt = d_pt * tangent;
 
-        b1->velocity -= b1->invMass * Pt;
-        b1->angularVelocity -= b1->invI * Cross(c->r1, Pt);
+        b1->velocity -= b1->inv_mass * pt;
+        b1->angular_velocity -= b1->inv_i * cross(c->r1, pt);
 
-        b2->velocity += b2->invMass * Pt;
-        b2->angularVelocity += b2->invI * Cross(c->r2, Pt);
+        b2->velocity += b2->inv_mass * pt;
+        b2->angular_velocity += b2->inv_i * cross(c->r2, pt);
     }
 }
 

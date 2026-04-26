@@ -19,10 +19,25 @@
 #include <cstdint>                // for uint8_t, uint16_t
 #include <luya/display/display.h> // for height, scale, width
 
+/****************************************************************************
+ * SDL_Display
+ *
+ * Desktop display driver. Opens a 320x240 SDL2 window scaled up by
+ * config::scale, creates a streaming RGB565 texture, and presents via
+ * SDL_RenderCopy each frame.
+ *
+ ****************************************************************************/
+
 namespace luya::display {
 
+/**
+ * @brief Destroy SDL texture, renderer, and window; call SDL_Quit
+ */
 SDL_Display::~SDL_Display()
 {
+    if (texture_) {
+        SDL_DestroyTexture(texture_);
+    }
     if (renderer_) {
         SDL_DestroyRenderer(renderer_);
     }
@@ -32,6 +47,9 @@ SDL_Display::~SDL_Display()
     SDL_Quit();
 }
 
+/**
+ * @brief Create window, renderer, and streaming RGB565 texture; clear to black
+ */
 void SDL_Display::init()
 {
     SDL_Init(SDL_INIT_VIDEO);
@@ -44,9 +62,31 @@ void SDL_Display::init()
     renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
     // SDL handles upscaling
     SDL_RenderSetLogicalSize(renderer_, config::width, config::height);
+    texture_ = SDL_CreateTexture(renderer_,
+        SDL_PIXELFORMAT_RGB565,
+        SDL_TEXTUREACCESS_STREAMING,
+        config::width,
+        config::height);
     clear();
 }
 
+/**
+ * @brief Upload framebuffer to the SDL texture and present the frame
+ */
+void SDL_Display::blit(frame_buffer_t const* framebuffer,
+    [[maybe_unused]] int len)
+{
+    SDL_UpdateTexture(texture_,
+        nullptr,
+        framebuffer,
+        config::width * static_cast<int>(sizeof(uint16_t)));
+    SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
+    SDL_RenderPresent(renderer_);
+}
+
+/**
+ * @brief Expand RGB565 color to RGB888 and clear the SDL renderer
+ */
 void SDL_Display::clear(uint16_t color)
 {
     // Expand RGB565 to RGB888

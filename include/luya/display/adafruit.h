@@ -26,17 +26,26 @@
 
 namespace luya::display {
 
+/****************************************************************************
+ * Adafruit_Display
+ *
+ * ILI9341 TFT display driver for Teensy 4.1. Uses ILI9341_t3 by default.
+ * Define LUYA_USE_ILI9341_T3N to switch to the DMA-capable variant. Pin
+ * assignments for the Teensy 4.1 SPI0 bus are in `pins::'.
+ *
+ ****************************************************************************/
+
 /**
  * @brief
- *   Adafruit 2.8" TFT (ILI9341) pin assignments for Teensy 4.1 SPI0 bus
+ * Adafruit 2.8" TFT (ILI9341) pin assignments for Teensy 4.1 SPI0 bus
  */
 namespace pins {
-inline constexpr uint8_t TFT_CS = 10;
-inline constexpr uint8_t TFT_DC = 9;
-inline constexpr uint8_t TFT_RST = 8;
-inline constexpr uint8_t TFT_MOSI = 11;
-inline constexpr uint8_t TFT_SCK = 13;
-inline constexpr uint8_t TFT_MISO = 12;
+inline constexpr uint8_t tft_cs = 10;
+inline constexpr uint8_t tft_dc = 9;
+inline constexpr uint8_t tft_rst = 8;
+inline constexpr uint8_t tft_mosi = 11;
+inline constexpr uint8_t tft_sck = 13;
+inline constexpr uint8_t tft_miso = 12;
 } // namespace pins
 
 /**
@@ -50,18 +59,19 @@ class Adafruit_Display : public Display
 {
   public:
     Adafruit_Display::Adafruit_Display()
-        : tft_(pins::TFT_CS,
-              pins::TFT_DC,
-              pins::TFT_RST,
-              pins::TFT_MOSI,
-              pins::TFT_SCK,
-              pins::TFT_MISO)
+        : tft_(pins::tft_cs,
+              pins::tft_dc,
+              pins::tft_rst,
+              pins::tft_mosi,
+              pins::tft_sck,
+              pins::tft_miso)
     {
     }
 
   public:
     void init() override;
     void clear(uint16_t color = 0x0000) override;
+    void blit(frame_buffer_t const* framebuffer, int len) override;
 
   private:
 #if defined(LUYA_USE_ILI9341_T3N)

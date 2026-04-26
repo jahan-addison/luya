@@ -23,14 +23,7 @@ namespace luya {
 
 /**
  * @brief
- *   Teensy Audio Library component
- *
- *   Audio memory and the I2S output path through the SGTL5000 codec
- *   on the Teensy audio shield.  Extend by adding AudioStream nodes and
- *   AudioConnection patches in init().
- *
- *   In SDL2 builds this is a no-op so the engine
- *   compiles and runs without Teensy hardware.
+ * Teensy audio shield I2S output via SGTL5000. No-op in SDL2 builds.
  */
 class Audio
 {
@@ -44,7 +37,7 @@ class Audio
 
   private:
 #if defined(__IMXRT1062__)
-    static constexpr int kAudio_Memory_Blocks = 8;
+    static constexpr int k_audio_memory_blocks = 8;
 
     AudioOutputI2S out_;
     AudioControlSGTL5000 codec_;
