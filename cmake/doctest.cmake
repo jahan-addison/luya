@@ -21,8 +21,10 @@ set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 23 OUTPUT_NAME
                                                             "test_suite")
 
 target_include_directories(
-  Test_Suite PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}>
-                    $<INSTALL_INTERFACE:${PROJECT_NAME}-${PROJECT_VERSION}>)
+  Test_Suite
+  PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:${PROJECT_NAME}-${PROJECT_VERSION}>)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   target_compile_options(

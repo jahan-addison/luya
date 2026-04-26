@@ -13,9 +13,11 @@
  * It is provided "as is" without express or implied warranty.
  */
 
-#include "joint.h"
-#include "body.h"
-#include "world.h"
+#include <luya/physics/joint.h>
+
+#include <luya/physics/body.h>  // for Body
+#include <luya/physics/math.h>  // for Vec2, Mat22, operator*, operator-
+#include <luya/physics/world.h> // for World
 
 namespace luya::physics {
 
@@ -48,12 +50,12 @@ void Joint::PreStep(float inv_dt)
     r2 = Rot2 * localAnchor2;
 
     // deltaV = deltaV0 + K * impulse
-    // invM = [(1/m1 + 1/m2) * eye(2) - skew(r1) * invI1 * skew(r1) - skew(r2) *
-    // invI2 * skew(r2)]
-    //      = [1/m1+1/m2     0    ] + invI1 * [r1.y*r1.y -r1.x*r1.y] + invI2 *
-    //      [r1.y*r1.y -r1.x*r1.y]
-    //        [    0     1/m1+1/m2]           [-r1.x*r1.y r1.x*r1.x] [-r1.x*r1.y
-    //        r1.x*r1.x]
+    // invM = [(1/m1 + 1/m2) * eye(2) - skew(r1) * invI1 * skew(r1) -
+    // skew(r2) * invI2 * skew(r2)]
+    //      = [1/m1+1/m2     0    ] + invI1 * [r1.y*r1.y -r1.x*r1.y] + invI2
+    //      * [r1.y*r1.y -r1.x*r1.y]
+    //        [    0     1/m1+1/m2]           [-r1.x*r1.y r1.x*r1.x]
+    //        [-r1.x*r1.y r1.x*r1.x]
     Mat22 K1;
     K1.col1.x = body1->invMass + body2->invMass;
     K1.col2.x = 0.0f;

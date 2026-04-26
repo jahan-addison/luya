@@ -15,13 +15,22 @@
 
 #pragma once
 
-#include "arbiter.h"
-#include "math.h"
-
-#include <etl/map.h>
-#include <etl/vector.h>
+#include "arbiter.h"    // for ArbiterKey, operator<
+#include "math.h"       // for Vec2
+#include <cstddef>      // for size_t
+#include <etl/map.h>    // for map
+#include <etl/vector.h> // for vector
 
 namespace luya::physics {
+class Body;
+} // lines 28-28
+namespace luya::physics {
+class Joint;
+} // lines 29-29
+
+namespace luya::physics {
+
+constexpr std::size_t MAX_PHYSICS_BODIES = 256;
 
 class Body;
 class Joint;
@@ -43,9 +52,9 @@ class World
     void BroadPhase();
 
   public:
-    etl::vector<Body*, 256> bodies;
-    etl::vector<Joint*, 256> joints;
-    etl::map<ArbiterKey, Arbiter, 256> arbiters;
+    etl::vector<Body*, MAX_PHYSICS_BODIES> bodies;
+    etl::vector<Joint*, MAX_PHYSICS_BODIES> joints;
+    etl::map<ArbiterKey, Arbiter, MAX_PHYSICS_BODIES> arbiters;
     Vec2 gravity;
     int iterations;
     static bool accumulateImpulses;

@@ -13,7 +13,10 @@
  * It is provided "as is" without express or implied warranty.
  */
 
-#include "body.h"
+#include <luya/physics/body.h>
+
+#include <float.h>             // for FLT_MAX
+#include <luya/physics/math.h> // for Vec2
 
 namespace luya::physics {
 

@@ -13,8 +13,9 @@
  * It is provided "as is" without express or implied warranty.
  */
 
-#include "arbiter.h"
-#include "body.h"
+#include <luya/physics/arbiter.h> // for FeaturePair, Contact, Collide
+#include <luya/physics/body.h>    // for Body
+#include <luya/physics/math.h>    // for Vec2, Mat22, operator*, Dot, opera...
 
 namespace luya::physics {
 

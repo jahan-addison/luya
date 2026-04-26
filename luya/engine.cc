@@ -13,6 +13,10 @@
 
 #include <luya/engine.h>
 
+#include <luya/audio.h>           // for Audio
+#include <luya/display/display.h> // for Display
+#include <luya/storage.h>         // for Storage
+
 namespace luya {
 
 /**

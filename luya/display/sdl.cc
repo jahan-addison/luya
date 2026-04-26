@@ -13,8 +13,11 @@
 
 #include <luya/display/sdl.h>
 
-#include <SDL2/SDL.h> // for SDL_Init, SDL_CreateWindow, SDL_CreateRenderer
-#include <cstdint>    // for uint8_t, uint16_t
+#include <SDL2/SDL.h>             // for SDL_Init, SDL_Quit, SDL_INIT_VIDEO
+#include <SDL_render.h>           // for SDL_CreateRenderer, SDL_DestroyRen...
+#include <SDL_video.h>            // for SDL_CreateWindow, SDL_DestroyWindow
+#include <cstdint>                // for uint8_t, uint16_t
+#include <luya/display/display.h> // for height, scale, width
 
 namespace luya::display {
 

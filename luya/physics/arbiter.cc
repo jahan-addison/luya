@@ -13,9 +13,12 @@
  * It is provided "as is" without express or implied warranty.
  */
 
-#include "arbiter.h"
-#include "body.h"
-#include "world.h"
+#include <luya/physics/arbiter.h>
+
+#include <luya/physics/body.h>  // for Body
+#include <luya/physics/math.h>  // for Vec2, Cross, Dot, operator*, operator-
+#include <luya/physics/world.h> // for World
+#include <math.h>               // for sqrtf
 
 namespace luya::physics {
 

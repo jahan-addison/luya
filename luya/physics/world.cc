@@ -13,17 +13,19 @@
  * It is provided "as is" without express or implied warranty.
  */
 
-#include "world.h"
-#include "arbiter.h"
-#include "body.h"
-#include "joint.h"
+#include <luya/physics/world.h>
 
-#include <etl/map.h>
-#include <etl/vector.h>
+#include <etl/map.h>              // for map, operator!=, operator==
+#include <etl/utility.h>          // for pair
+#include <etl/vector.h>           // for vector
+#include <luya/physics/arbiter.h> // for ArbiterKey, operator<, Arbiter
+#include <luya/physics/body.h>    // for Body
+#include <luya/physics/joint.h>   // for Joint
+#include <luya/physics/math.h>    // for Vec2, operator*, operator+
 
 namespace luya::physics {
 
-typedef etl::map<ArbiterKey, Arbiter, 256>::iterator ArbIter;
+typedef etl::map<ArbiterKey, Arbiter, MAX_PHYSICS_BODIES>::iterator ArbIter;
 typedef etl::pair<ArbiterKey, Arbiter> ArbPair;
 
 bool World::accumulateImpulses = true;
